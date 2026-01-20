@@ -1,5 +1,5 @@
 ---
-title: git常用操作汇总.md
+title: git常用操作汇总
 date: 2026-01-18
 slug: git-learning
 ---
@@ -26,4 +26,5 @@ o---o---o---o---o---o  master
 - 文档 ：<a href="https://git-scm.com/docs/git-format-patch/zh_HANS-CN" target="_blank">https://git-scm.com/docs/git-format-patch/zh_HANS-CN</a>
 
 使用参数：--subject-prefix='PATCH RESEND net-next' -v6 -3，实现如下效果
+
 [PATCH RESEND net-next v6 0/3] Add DWMAC glue driver for Motorcomm YT6801
