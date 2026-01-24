@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 # scripts/build.py
 import os
+import sys  # 新增：导入sys模块
 import shutil
 import yaml
 import markdown
+
+# ========== 新增：补全路径处理（解决config导入问题） ==========
+# 获取当前脚本所在目录（scripts/）
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+# 获取工程根目录（scripts/的上层目录）
+project_root = os.path.dirname(scripts_dir)
+# 将根目录加入sys.path，让Python能找到config.py
+sys.path.append(project_root)
+
 from config import CONFIG  # 导入全局配置
 
 # 工具函数：创建目录（不存在则创建）
@@ -58,15 +68,24 @@ def process_all_posts():
                 meta["date"] = str(meta.get("date", "无日期"))  # 强制转字符串
                 meta["slug"] = meta.get("slug", file.replace(".md", ""))  # 文章唯一标识
                 
-                # 2. Markdown转HTML（支持代码块、链接等扩展）
+                # 2. Markdown转HTML（========== 核心修改：强化代码块解析 ==========）
                 html_content = markdown.markdown(
                     md_body,
                     extensions=[
-                        "fenced_code",  # 代码块高亮基础
+                        "fenced_code",  # 解析```包裹的代码块（核心）
+                        "codehilite",   # 新增：代码语法高亮（依赖pygments）
                         "tables",       # 表格支持
                         "toc",          # 目录（可选）
                         "md_in_html"    # HTML混合MD
-                    ]
+                    ],
+                    # 新增：codehilite配置（适配你的样式风格）
+                    extension_configs={
+                        "codehilite": {
+                            "linenums": False,  # 不显示行号（和你的极简风格一致）
+                            "guess_lang": True, # 自动识别代码语言（bash/python等）
+                            "css_class": "highlight" # 统一高亮样式类名
+                        }
+                    }
                 )
                 
                 # 3. 生成文章页输出路径（保持原文件名，改后缀为.html）

@@ -130,3 +130,40 @@ footer {
     font-size: 0.9rem;
     text-align: center;
 }
+
+/* ========== 新增：代码块样式（匹配你的设计风格） ========== */
+/* 代码块容器（```包裹的内容） */
+.post-content pre {
+    background-color: #f8f9fa;  /* 和页面背景一致，更和谐 */
+    border: 1px solid #e2e8f0;  /* 和你的边框风格统一 */
+    border-radius: 6px;         /* 轻微圆角，极简风格 */
+    padding: 20px;              /* 内边距，保证代码可读性 */
+    margin: 20px 0;             /* 上下间距，区分正文 */
+    overflow-x: auto;           /* 代码过长时横向滚动 */
+}
+
+/* 代码块内文字 */
+.post-content code {
+    font-family: "DejaVu Sans Mono", "Monaco", monospace;  /* 保持你的等宽字体 */
+    font-size: 1rem;            /* 匹配正文字体大小 */
+    color: #2d3748;             /* 文字颜色和正文一致 */
+}
+
+/* 行内代码（`xxx` 包裹的内容） */
+.post-content p code, 
+.post-content li code {
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    color: #2b6cb0;             /* 用你的强调色突出行内代码 */
+}
+
+/* 语法高亮的代码块（可选，增强可读性） */
+.post-content .highlight {
+    background-color: #f8f9fa;
+}
+.post-content .highlight pre {
+    border: none;  /* 避免双重边框 */
+    padding: 0;
+}

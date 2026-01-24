@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eweOS在QEMU中的安装 - duge1975</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1 class="site-title">Blog of duge1975</h1>
+        <nav>
+            <a href="/" class="nav-link">返回首页</a>
+        </nav>
+    </header>
+
+    <main class="post-content">
+        <h1>eweOS在QEMU中的安装</h1>
+        <div class="post-meta">发布日期：2026-01-24</div>
+        <h2 id="_1">介绍</h2>
+<p>这是我在QEMU中安装eweOS的过程。</p>
+<h2 id="_2">安装教程</h2>
+<p>创建一个 20GB 的虚拟磁盘（QEMU Copy-On-Write version 2，qcow2格式，支持快照和压缩）：</p>
+<div class="highlight"><pre><span></span><code>qemu-img create -f qcow2 eweos-disk.qcow2 20G
+</code></pre></div>
+
+<p>按照eweOS官网命令运行eweOS的live iso：</p>
+<div class="highlight"><pre><span></span><code><span class="nv">VCPU</span><span class="o">=</span><span class="m">4</span>
+<span class="nv">VRAM</span><span class="o">=</span>8G
+<span class="nv">DISK</span><span class="o">=</span>eweos-disk.qcow2
+<span class="nv">ISO</span><span class="o">=</span>eweos-x86_64-liveimage-desktop-xfce.iso
+
+sudo qemu-system-x86_64 <span class="se">\</span>
+    -smp <span class="nv">$VCPU</span> -m <span class="nv">$VRAM</span> -cpu host <span class="se">\</span>
+    -machine <span class="nv">type</span><span class="o">=</span>q35,accel<span class="o">=</span>kvm <span class="se">\</span>
+    -drive <span class="nv">file</span><span class="o">=</span><span class="nv">$DISK</span>,format<span class="o">=</span>qcow2,if<span class="o">=</span>virtio,id<span class="o">=</span>disk0 <span class="se">\</span>
+    -cdrom <span class="nv">$ISO</span> <span class="se">\</span>
+    -drive <span class="k">if</span><span class="o">=</span>pflash,format<span class="o">=</span>raw,readonly<span class="o">=</span>on,file<span class="o">=</span>/usr/share/OVMF/OVMF_CODE.fd <span class="se">\</span>
+    -vga virtio -display gtk <span class="se">\</span>
+    -device virtio-net,netdev<span class="o">=</span>ewe -netdev user,id<span class="o">=</span>ewe,hostfwd<span class="o">=</span>tcp:127.0.0.1:10022-:22 <span class="se">\</span>
+    -device ac97 <span class="se">\</span>
+    -device qemu-xhci,id<span class="o">=</span>xhci <span class="se">\</span>
+    -device usb-tablet,bus<span class="o">=</span>xhci.0 <span class="se">\</span>
+    -device usb-kbd,bus<span class="o">=</span>xhci.0
+</code></pre></div>
+
+<p>启动后，打开终端，修改/etc/pacman.d/mirrorlist，修改镜像，我这里改成了nju的镜像，根据情况自己选择：</p>
+<div class="highlight"><pre><span></span><code><span class="nv">Server</span> <span class="o">=</span> https://mirrors.nju.edu.cn/eweos/<span class="nv">$repo</span>/os/<span class="nv">$arch</span>
+</code></pre></div>
+
+<p>更新pacman数据库：</p>
+<div class="highlight"><pre><span></span><code>sudo pacman -Syu
+</code></pre></div>
+
+<p>安装必要的软件包：</p>
+<div class="highlight"><pre><span></span><code>sudo pacman -S dosfstools e2fsprogs
+</code></pre></div>
+
+<p>使用 <code>lsblk</code> 查看磁盘分区情况，会看到/dev/vda即为虚拟磁盘：</p>
+<div class="highlight"><pre><span></span><code>/dev/vda 20G
+</code></pre></div>
+
+<p>然后运行<code>sudo cfdisk /dev/vda</code>来对虚拟磁盘进行分区，我这里分了两个分区：</p>
+<ul>
+<li>
+<p>/dev/vda1 ：EFI System，FAT32 格式，用于引导，512M</p>
+</li>
+<li>
+<p>/dev/vda2 ：Linux filesystem，ext4 格式，用于根文件系统，剩余空间</p>
+</li>
+</ul>
+<p>格式化分区：</p>
+<div class="highlight"><pre><span></span><code>sudo mkfs.fat -F32 /dev/vda1
+sudo mkfs.ext4 /dev/vda2
+</code></pre></div>
+
+<p>挂载分区：</p>
+<div class="highlight"><pre><span></span><code>sudo mount /dev/vda2 /mnt
+sudo mkdir -p /mnt/boot
+sudo mount /dev/vda1 /mnt/boot
+</code></pre></div>
+
+<p>使用 pacstrap 安装基本系统，Pacstrap 是用于在 Arch Linux 安装过程中引导系统安装的工具。它用于将基础系统软件包安装到指定的目录（通常是挂载的目标分区）：</p>
+<div class="highlight"><pre><span></span><code>sudo pacstrap /mnt base-baremetal linux efibootmgr e2fsprogs
+</code></pre></div>
+
+<p>进入 chroot 环境配置系统</p>
+<div class="highlight"><pre><span></span><code>sudo arch-chroot /mnt
+</code></pre></div>
+
+<p>修复 tinyramfs 配置</p>
+<div class="highlight"><pre><span></span><code>/etc/tinyramfs/config
+<span class="nv">hooks</span><span class="o">=</span><span class="s2">&quot;mdev&quot;</span>
+<span class="nv">rootfs_type</span><span class="o">=</span><span class="s2">&quot;ext4&quot;</span>
+<span class="nv">root</span><span class="o">=</span><span class="s2">&quot;UUID=根文件分区的UUID(blkid /dev/vda2)&quot;</span>
+<span class="nv">compress</span><span class="o">=</span><span class="s2">&quot;zstd&quot;</span>
+</code></pre></div>
+
+<p>安装 limine 引导程序</p>
+<div class="highlight"><pre><span></span><code>limine-install /boot --removable
+limine-mkconfig -o /boot/limine.conf
+</code></pre></div>
+
+<p>创建用户 ewe</p>
+<div class="highlight"><pre><span></span><code>adduser -D ewe
+adduser ewe wheel
+passwd ewe
+passwd root
+</code></pre></div>
+
+<p>退出 chroot 环境</p>
+<div class="highlight"><pre><span></span><code><span class="nb">exit</span>
+sudo umount --recursive /mnt
+</code></pre></div>
+
+<p>启动eweOS</p>
+<div class="highlight"><pre><span></span><code><span class="nv">VCPU</span><span class="o">=</span><span class="m">4</span>
+<span class="nv">VRAM</span><span class="o">=</span>8G
+<span class="nv">DISK</span><span class="o">=</span>eweos-disk.qcow2
+sudo qemu-system-x86_64 <span class="se">\</span>
+    -smp <span class="nv">$VCPU</span> -m <span class="nv">$VRAM</span> -cpu host <span class="se">\</span>
+    -machine <span class="nv">type</span><span class="o">=</span>q35,accel<span class="o">=</span>kvm <span class="se">\</span>
+    -drive <span class="nv">file</span><span class="o">=</span><span class="nv">$DISK</span>,format<span class="o">=</span>qcow2,if<span class="o">=</span>virtio,id<span class="o">=</span>disk0 <span class="se">\</span>
+    -drive <span class="k">if</span><span class="o">=</span>pflash,format<span class="o">=</span>raw,readonly<span class="o">=</span>on,file<span class="o">=</span>/usr/share/OVMF/OVMF_CODE.fd <span class="se">\</span>
+    -vga virtio -display gtk <span class="se">\</span>
+    -device virtio-net,netdev<span class="o">=</span>ewe -netdev user,id<span class="o">=</span>ewe,hostfwd<span class="o">=</span>tcp:127.0.0.1:10022-:22 <span class="se">\</span>
+    -device ac97 <span class="se">\</span>
+    -device qemu-xhci,id<span class="o">=</span>xhci <span class="se">\</span>
+    -device usb-tablet,bus<span class="o">=</span>xhci.0 <span class="se">\</span>
+    -device usb-kbd,bus<span class="o">=</span>xhci.0
+</code></pre></div>
+
+<p>使用scp将文件传到qemu中</p>
+<div class="highlight"><pre><span></span><code>scp -P <span class="m">10022</span> /home/duge/eweOS/*.zip ewe@127.0.0.1:/home/ewe/
+</code></pre></div>
+    </main>
+
+    <footer>
+        <p>© 2026 duge1975 · 基于Python + Markdown + GitHub Pages构建</p>
+    </footer>
+</body>
+</html>

@@ -25,12 +25,13 @@
 <p>git rebase --onto master next topic</p>
 <p>这是使用 <code>rebase --onto</code> 将基于一个分支的主题分支移植到另一个分支的方法，假装您从后者分支又分叉了主题分支。</p>
 <p>首先，假设您的 <code>topic</code> 分支基于 <code>next</code> 分支。例如，<code>topic</code> 中开发的功能依赖于 <code>next</code> 中的某些功能。</p>
-<pre><code class="language-text">o---o---o---o---o---o  master
+<div class="highlight"><pre><span></span><code>o---o---o---o---o---o  master
          \
           o---o---o---o---o---o  next
                                \
                                 o---o---o  topic
-</code></pre>
+</code></pre></div>
+
 <p>我们想让 topic 分支从 master 分支分叉；例如，因为 topic 所依赖的功能已合并到更稳定的 master 分支。我们希望我们的树看起来像这样：</p>
 <h2 id="2-git-format-patch">2 git format-patch</h2>
 <ul>
